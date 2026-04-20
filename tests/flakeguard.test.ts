@@ -315,6 +315,7 @@ describe('action integration', () => {
     const historyFile = path.join(tempDir, 'history.json');
     const stepSummaryPath = path.join(tempDir, 'step-summary.md');
     const outputs: Record<string, string> = {};
+    const originalRunId = process.env.GITHUB_RUN_ID;
 
     const priorHistory: HistorySnapshot = {
       version: 1,
@@ -347,54 +348,62 @@ describe('action integration', () => {
       },
     };
 
-    await writeFile(historyFile, JSON.stringify(priorHistory, null, 2));
+    try {
+      delete process.env.GITHUB_RUN_ID;
+      await writeFile(historyFile, JSON.stringify(priorHistory, null, 2));
 
-    const runtime: ActionRuntime = {
-      getInput(name: string) {
-        const inputs: Record<string, string> = {
-          report_paths: fixturePath,
-          history_file: historyFile,
-          max_runs: '5',
-          suspect_threshold: '2',
-        };
-        return inputs[name] ?? '';
-      },
-      setOutput(name: string, value: string) {
-        outputs[name] = value;
-      },
-      setFailed(message: string) {
-        throw new Error(message);
-      },
-      cwd: tempDir,
-      workspace: tempDir,
-      stepSummaryPath,
-      now: () => new Date('2026-04-19T20:30:00.000Z'),
-      log: () => undefined,
-    };
+      const runtime: ActionRuntime = {
+        getInput(name: string) {
+          const inputs: Record<string, string> = {
+            report_paths: fixturePath,
+            history_file: historyFile,
+            max_runs: '5',
+            suspect_threshold: '2',
+          };
+          return inputs[name] ?? '';
+        },
+        setOutput(name: string, value: string) {
+          outputs[name] = value;
+        },
+        setFailed(message: string) {
+          throw new Error(message);
+        },
+        cwd: tempDir,
+        workspace: tempDir,
+        stepSummaryPath,
+        now: () => new Date('2026-04-19T20:30:00.000Z'),
+        log: () => undefined,
+      };
 
-    const result = await runAction(runtime);
-    const summaryMarkdown = await readFile(result.summaryPath, 'utf8');
-    const updatedHistory = JSON.parse(await readFile(historyFile, 'utf8')) as HistorySnapshot;
-    const appendedStepSummary = await readFile(stepSummaryPath, 'utf8');
+      const result = await runAction(runtime);
+      const summaryMarkdown = await readFile(result.summaryPath, 'utf8');
+      const updatedHistory = JSON.parse(await readFile(historyFile, 'utf8')) as HistorySnapshot;
+      const appendedStepSummary = await readFile(stepSummaryPath, 'utf8');
 
-    expect(result.suspectCount).toBe(1);
-    expect(result.historyPath).toBe(historyFile);
-    expect(result.summaryPath).toBe(path.join(tempDir, 'flakeguard-summary.md'));
-    expect(outputs).toEqual({
-      suspect_count: '1',
-      summary_path: path.join(tempDir, 'flakeguard-summary.md'),
-      history_path: historyFile,
-    });
-    expect(summaryMarkdown).toContain('calculator.SubtractionTest::subtracts numbers');
-    expect(appendedStepSummary).toContain('# FlakeGuard Summary');
-    expect(updatedHistory.runs.map(run => run.runId)).toEqual(['run-1', 'run-2', '2026-04-19T20:30:00.000Z']);
-    expect(updatedHistory.tests['calculator.SubtractionTest::subtracts numbers'].recent).toEqual([
-      { runId: 'run-1', timestamp: '2026-04-19T20:00:00.000Z', status: 'passed' },
-      { runId: 'run-2', timestamp: '2026-04-19T20:10:00.000Z', status: 'failed' },
-      { runId: '2026-04-19T20:30:00.000Z', timestamp: '2026-04-19T20:30:00.000Z', status: 'failed' },
-    ]);
-
-    await rm(tempDir, { recursive: true, force: true });
+      expect(result.suspectCount).toBe(1);
+      expect(result.historyPath).toBe(historyFile);
+      expect(result.summaryPath).toBe(path.join(tempDir, 'flakeguard-summary.md'));
+      expect(outputs).toEqual({
+        suspect_count: '1',
+        summary_path: path.join(tempDir, 'flakeguard-summary.md'),
+        history_path: historyFile,
+      });
+      expect(summaryMarkdown).toContain('calculator.SubtractionTest::subtracts numbers');
+      expect(appendedStepSummary).toContain('# FlakeGuard Summary');
+      expect(updatedHistory.runs.map(run => run.runId)).toEqual(['run-1', 'run-2', '2026-04-19T20:30:00.000Z']);
+      expect(updatedHistory.tests['calculator.SubtractionTest::subtracts numbers'].recent).toEqual([
+        { runId: 'run-1', timestamp: '2026-04-19T20:00:00.000Z', status: 'passed' },
+        { runId: 'run-2', timestamp: '2026-04-19T20:10:00.000Z', status: 'failed' },
+        { runId: '2026-04-19T20:30:00.000Z', timestamp: '2026-04-19T20:30:00.000Z', status: 'failed' },
+      ]);
+    } finally {
+      if (originalRunId === undefined) {
+        delete process.env.GITHUB_RUN_ID;
+      } else {
+        process.env.GITHUB_RUN_ID = originalRunId;
+      }
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 
   it('persists history across repeated runs and flags a suspect flake on the third run', async () => {
