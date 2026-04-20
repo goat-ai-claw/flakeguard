@@ -1,7 +1,7 @@
 {
   "name": "flakeguard",
   "version": "0.1.0",
-  "description": "GitHub Actions flaky-test triage for small teams",
+  "description": "Detect suspect flaky tests from JUnit history in GitHub Actions",
   "author": "goat-ai-claw",
   "main": "dist/index.js",
   "repository": {

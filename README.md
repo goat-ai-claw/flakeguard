@@ -1,8 +1,8 @@
 # FlakeGuard
 
-**GitHub Actions flaky-test triage for small teams.**
+**Detect suspect flaky tests from JUnit history in GitHub Actions.**
 
-FlakeGuard is a local TypeScript GitHub Action that parses JUnit XML reports, keeps a rolling JSON history, flags likely flaky tests with simple deterministic rules, and writes a markdown summary you can review in the workflow UI.
+FlakeGuard is a local TypeScript GitHub Action that turns JUnit XML history into a flaky-test report directly in the workflow UI. It keeps a rolling JSON history, flags likely flaky tests with simple deterministic rules, and writes a markdown summary you can review in GitHub Actions.
 
 ## What it does
 
