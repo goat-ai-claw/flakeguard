@@ -58,17 +58,21 @@ jobs:
 
 ## History persistence
 
-For this MVP, FlakeGuard only updates a local JSON file. To make the wedge useful across workflow runs, persist that file between runs later with artifacts, a cache key, or a branch-backed automation step.
+The lightest credible MVP path is a branch-scoped cache that restores `.flakeguard/history.json` before FlakeGuard runs and saves it again afterward. See [`examples/cache-history.yml`](examples/cache-history.yml) for a copy-paste workflow using `actions/cache/restore@v4` and `actions/cache/save@v4`.
+
+That pattern keeps the UX lightweight:
+
+- one stable `history_file` path inside the repo workspace
+- one unique cache key per run attempt (`github.run_id` + `github.run_attempt`)
+- one branch-scoped `restore-keys` prefix so the latest history is reused on the next run without committing state back to the repo
+
+Because this pattern creates one immutable cache entry per run attempt, teams should pair it with normal cache-retention hygiene if they keep FlakeGuard history for a long time.
 
 ## Local demo
 
 ```bash
 npm install
-INPUT_REPORT_PATHS=fixtures/junit-sample.xml \
-INPUT_HISTORY_FILE=.flakeguard/demo-history.json \
-INPUT_MAX_RUNS=5 \
-INPUT_SUSPECT_THRESHOLD=2 \
-node dist/index.js
+npm run demo:cross-run
 ```
 
-That command writes a summary markdown file next to the history file and updates the JSON snapshot for the next run.
+That command rebuilds `dist/`, runs three synthetic workflow executions against the same history file, and writes a real suspect-flake summary under `demo-output/cross-run/`.

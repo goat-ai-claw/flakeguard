@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Restore FlakeGuard history
+        id: flakeguard-history
+        uses: actions/cache/restore@v4
+        with:
+          path: .flakeguard
+          key: flakeguard-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            flakeguard-${{ github.ref_name }}-
+
+      - name: Run tests with JUnit output
+        run: npm test -- --reporters=default --reporters=jest-junit
+
+      - name: FlakeGuard
+        if: always()
+        uses: goat-ai-claw/flakeguard@v1
+        with:
+          report_paths: reports/junit.xml
+          history_file: .flakeguard/history.json
+          max_runs: '10'
+          suspect_threshold: '2'
+
+      - name: Save FlakeGuard history
+        if: always() && steps.flakeguard-history.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .flakeguard
+          key: ${{ steps.flakeguard-history.outputs.cache-primary-key }}

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run-1" tests="2">
+  <testcase classname="suite.Flake" name="toggles">
+    <failure message="boom">boom</failure>
+  </testcase>
+  <testcase classname="suite.Stable" name="always passes" />
+</testsuite>

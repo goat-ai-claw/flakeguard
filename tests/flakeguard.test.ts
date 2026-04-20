@@ -304,6 +304,11 @@ describe('flake detection and summary rendering', () => {
 
 describe('action integration', () => {
   const fixturePath = path.join(__dirname, '..', 'fixtures', 'junit-sample.xml');
+  const multiRunFixturePaths = [
+    path.join(__dirname, '..', 'fixtures', 'multi-run', 'run-1.xml'),
+    path.join(__dirname, '..', 'fixtures', 'multi-run', 'run-2.xml'),
+    path.join(__dirname, '..', 'fixtures', 'multi-run', 'run-3.xml'),
+  ];
 
   it('writes summary and history files, appends step summary, and emits outputs', async () => {
     const tempDir = await mkdtemp(path.join(os.tmpdir(), 'flakeguard-action-'));
@@ -390,5 +395,76 @@ describe('action integration', () => {
     ]);
 
     await rm(tempDir, { recursive: true, force: true });
+  });
+
+  it('persists history across repeated runs and flags a suspect flake on the third run', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'flakeguard-cross-run-'));
+    const historyFile = path.join(tempDir, '.flakeguard', 'history.json');
+    const stepSummaryPath = path.join(tempDir, 'step-summary.md');
+    const originalRunId = process.env.GITHUB_RUN_ID;
+    let finalOutputs: Record<string, string> = {};
+
+    try {
+      const timestamps = [
+        '2026-04-20T00:00:00.000Z',
+        '2026-04-20T00:10:00.000Z',
+        '2026-04-20T00:20:00.000Z',
+      ];
+
+      for (const [index, reportPath] of multiRunFixturePaths.entries()) {
+        const outputs: Record<string, string> = {};
+        process.env.GITHUB_RUN_ID = `run-${index + 1}`;
+
+        await runAction({
+          getInput(name: string) {
+            const inputs: Record<string, string> = {
+              report_paths: reportPath,
+              history_file: historyFile,
+              max_runs: '5',
+              suspect_threshold: '2',
+            };
+            return inputs[name] ?? '';
+          },
+          setOutput(name: string, value: string) {
+            outputs[name] = value;
+          },
+          setFailed(message: string) {
+            throw new Error(message);
+          },
+          cwd: tempDir,
+          workspace: tempDir,
+          stepSummaryPath,
+          now: () => new Date(timestamps[index]),
+          log: () => undefined,
+        });
+
+        finalOutputs = outputs;
+      }
+
+      const summaryPath = path.join(tempDir, '.flakeguard', 'flakeguard-summary.md');
+      const summaryMarkdown = await readFile(summaryPath, 'utf8');
+      const updatedHistory = JSON.parse(await readFile(historyFile, 'utf8')) as HistorySnapshot;
+
+      expect(finalOutputs).toEqual({
+        suspect_count: '1',
+        summary_path: summaryPath,
+        history_path: historyFile,
+      });
+      expect(updatedHistory.runs.map(run => run.runId)).toEqual(['run-1', 'run-2', 'run-3']);
+      expect(updatedHistory.tests['suite.Flake::toggles'].recent).toEqual([
+        { runId: 'run-1', timestamp: '2026-04-20T00:00:00.000Z', status: 'failed' },
+        { runId: 'run-2', timestamp: '2026-04-20T00:10:00.000Z', status: 'passed' },
+        { runId: 'run-3', timestamp: '2026-04-20T00:20:00.000Z', status: 'failed' },
+      ]);
+      expect(summaryMarkdown).toContain('## Suspect flakes');
+      expect(summaryMarkdown).toContain('`suite.Flake::toggles` — latest: **failed**, passes: 1, failures: 2');
+    } finally {
+      if (originalRunId === undefined) {
+        delete process.env.GITHUB_RUN_ID;
+      } else {
+        process.env.GITHUB_RUN_ID = originalRunId;
+      }
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 });

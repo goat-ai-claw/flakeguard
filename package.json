@@ -6,7 +6,8 @@
   "scripts": {
     "build": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
     "lint": "tsc --noEmit",
-    "test": "jest --verbose"
+    "test": "jest --verbose",
+    "demo:cross-run": "npm run build && node scripts/demo-cross-run.cjs"
   },
   "dependencies": {
     "@actions/core": "^1.11.1",
