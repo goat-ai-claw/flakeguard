@@ -41,6 +41,38 @@ jobs:
 
 For local development inside this repo, replace `goat-ai-claw/flakeguard@v1` with `./`.
 
+That minimal snippet proves the wiring. To detect real cross-run flakes, pair it with the cache-backed history pattern in [`examples/cache-history.yml`](examples/cache-history.yml).
+
+## What the workflow summary looks like
+
+After FlakeGuard has seen a few runs for the same test, the GitHub Actions step summary highlights mixed pass/fail history directly in the workflow UI:
+
+```md
+# FlakeGuard Summary
+
+## Current run totals
+
+- Total: 2
+- Passed: 1
+- Failed: 1
+- Skipped: 0
+
+## Suspect flakes
+
+- `suite.Flake::toggles` — latest: **failed**, passes: 1, failures: 2, recent: F → P → F
+
+## Stable failures
+
+No stable failures detected.
+```
+
+You can reproduce that exact suspect-flake summary locally with:
+
+```bash
+npm install
+npm run demo:cross-run
+```
+
 ## Inputs
 
 | Input | Default | Description |
