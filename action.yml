@@ -1,0 +1,36 @@
+name: 'FlakeGuard'
+description: 'GitHub Actions flaky-test triage for small teams'
+author: 'FlakeGuard'
+
+branding:
+  icon: 'shield'
+  color: 'yellow'
+
+inputs:
+  report_paths:
+    description: 'Comma-separated JUnit XML files or glob patterns to parse'
+    required: true
+  history_file:
+    description: 'Path to the rolling JSON history file'
+    required: true
+    default: '.flakeguard/history.json'
+  max_runs:
+    description: 'Maximum number of runs to retain in rolling history'
+    required: false
+    default: '10'
+  suspect_threshold:
+    description: 'Minimum failures in recent history before mixed pass/fail tests are marked suspect'
+    required: false
+    default: '2'
+
+outputs:
+  suspect_count:
+    description: 'Number of likely flaky tests detected in the current history window'
+  summary_path:
+    description: 'Path to the generated markdown summary file'
+  history_path:
+    description: 'Path to the updated history JSON file'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

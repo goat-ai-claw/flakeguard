@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="unit" tests="3" failures="1" skipped="1">
+    <testcase classname="calculator.AdditionTest" name="adds numbers" time="0.01" />
+    <testcase classname="calculator.SubtractionTest" name="subtracts numbers" time="0.02">
+      <failure message="Expected 1 but received 2">AssertionError</failure>
+    </testcase>
+    <testcase classname="calculator.DivisionTest" name="skips on zero divisor" time="0.00">
+      <skipped message="guarded by feature flag" />
+    </testcase>
+  </testsuite>
+</testsuites>
