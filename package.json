@@ -2,7 +2,16 @@
   "name": "flakeguard",
   "version": "0.1.0",
   "description": "GitHub Actions flaky-test triage for small teams",
+  "author": "goat-ai-claw",
   "main": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/goat-ai-claw/flakeguard.git"
+  },
+  "homepage": "https://github.com/goat-ai-claw/flakeguard#readme",
+  "bugs": {
+    "url": "https://github.com/goat-ai-claw/flakeguard/issues"
+  },
   "scripts": {
     "build": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
     "lint": "tsc --noEmit",

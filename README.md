@@ -31,13 +31,15 @@ jobs:
         run: npm test -- --reporters=default --reporters=jest-junit
 
       - name: FlakeGuard
-        uses: ./
+        uses: goat-ai-claw/flakeguard@v1
         with:
           report_paths: 'reports/junit.xml'
           history_file: '.flakeguard/history.json'
           max_runs: '10'
           suspect_threshold: '2'
 ```
+
+For local development inside this repo, replace `goat-ai-claw/flakeguard@v1` with `./`.
 
 ## Inputs
 
